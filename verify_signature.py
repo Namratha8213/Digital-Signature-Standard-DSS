@@ -7,31 +7,87 @@ import base64
 client = MongoClient("mongodb://localhost:27017/")
 db = client["dss_database"]
 signatures_collection = db["signatures"]
+users_collection = db["users"]
 
-# Fetch the latest stored signature
-signature_data = signatures_collection.find_one({}, sort=[("_id", -1)])
+def is_user_logged_in(username):
+    """Check if the user is logged in."""
+    return users_collection.find_one({"username": username}) is not None
 
-if signature_data:
-    message = signature_data["message"].encode()
-    signature = base64.b64decode(signature_data["signature"])
-    public_key_pem = signature_data["public_key"].encode()
+def verify_signature(username):
+    """Verify the signature for a logged-in user."""
+    if not is_user_logged_in(username):
+        print("❌ User is not logged in. Please log in first.")
+        return
+    
+    # Fetch the latest stored signature
+    signature_data = signatures_collection.find_one({"username": username}, sort=[("_id", -1)])
 
-    # Load the public key
-    public_key = serialization.load_pem_public_key(public_key_pem)
+    if signature_data:
+        message = signature_data["message"].encode()
+        signature = base64.b64decode(signature_data["signature"])
+        public_key_pem = signature_data["public_key"].encode()
 
-    # Verify the signature
-    try:
-        public_key.verify(
-            signature,
-            message,
-            padding.PSS(
-                mgf=padding.MGF1(hashes.SHA256()),
-                salt_length=padding.PSS.MAX_LENGTH
-            ),
-            hashes.SHA256()
-        )
-        print("✅ Signature is valid!")
-    except Exception as e:
-        print("❌ Signature verification failed:", str(e))
-else:
-    print("No signatures found in MongoDB.")
+        # Load the public key
+        public_key = serialization.load_pem_public_key(public_key_pem)
+
+        # Verify the signature
+        try:
+            public_key.verify(
+                signature,
+                message,
+                padding.PSS(
+                    mgf=padding.MGF1(hashes.SHA256()),
+                    salt_length=padding.PSS.MAX_LENGTH
+                ),
+                hashes.SHA256()
+            )
+            print("✅ Signature is valid!")
+        except Exception as e:
+            print("❌ Signature verification failed:", str(e))
+    else:
+        print("❌ No signatures found for this user.")
+
+# Example usage
+if __name__ == "__main__":
+    username = input("Enter your username: ")
+    verify_signature(username)
+
+
+
+# from cryptography.hazmat.primitives.asymmetric import padding
+# from cryptography.hazmat.primitives import hashes, serialization
+# from pymongo import MongoClient
+# import base64
+
+# # Connect to MongoDB
+# client = MongoClient("mongodb://localhost:27017/")
+# db = client["dss_database"]
+# signatures_collection = db["signatures"]
+
+# # Fetch the latest stored signature
+# signature_data = signatures_collection.find_one({}, sort=[("_id", -1)])
+
+# if signature_data:
+#     message = signature_data["message"].encode()
+#     signature = base64.b64decode(signature_data["signature"])
+#     public_key_pem = signature_data["public_key"].encode()
+
+#     # Load the public key
+#     public_key = serialization.load_pem_public_key(public_key_pem)
+
+#     # Verify the signature
+#     try:
+#         public_key.verify(
+#             signature,
+#             message,
+#             padding.PSS(
+#                 mgf=padding.MGF1(hashes.SHA256()),
+#                 salt_length=padding.PSS.MAX_LENGTH
+#             ),
+#             hashes.SHA256()
+#         )
+#         print("✅ Signature is valid!")
+#     except Exception as e:
+#         print("❌ Signature verification failed:", str(e))
+# else:
+#     print("No signatures found in MongoDB.")
