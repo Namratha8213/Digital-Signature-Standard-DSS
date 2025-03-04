@@ -1,0 +1,11 @@
+# Ignore compiled Python files
+__pycache__/
+
+# Ignore virtual environments
+venv/
+
+# Ignore private key files (important for security)
+*.pem
+
+# Ignore environment variable files (used for secrets like database credentials)
+.env
