@@ -3,6 +3,7 @@ import jwt
 import datetime
 from functools import wraps
 from pymongo import MongoClient
+from werkzeug.security import generate_password_hash, check_password_hash
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes, serialization
 import base64
@@ -21,16 +22,19 @@ def token_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         token = request.headers.get("Authorization")
-        if not token:
-            return jsonify({"message": "Token is missing!"}), 401
+        if not token or not token.startswith("Bearer "):
+            return jsonify({"message": "Token is missing or invalid format!"}), 401
+        
         try:
-            token = token.split(" ")[1]  # Remove "Bearer " prefix
-            jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            token = token.split(" ")[1]  # Extract actual token
+            decoded_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            request.user = decoded_token["username"]  # Store username in request context
         except jwt.ExpiredSignatureError:
             return jsonify({"message": "Token has expired!"}), 401
         except jwt.InvalidTokenError:
             return jsonify({"message": "Invalid token!"}), 401
         return f(*args, **kwargs)
+    
     return wrapper
 
 # ----------------- User Registration -----------------
@@ -40,10 +44,16 @@ def register_user():
     username = data.get("username")
     password = data.get("password")
 
+    if not username or not password:
+        return jsonify({"message": "Username and password are required!"}), 400
+
     if users_collection.find_one({"username": username}):
         return jsonify({"message": "User already exists!"}), 400
 
-    users_collection.insert_one({"username": username, "password": password})
+    # Hash password before storing
+    hashed_password = generate_password_hash(password)
+
+    users_collection.insert_one({"username": username, "password": hashed_password})
 
     # Generate JWT token
     token = jwt.encode(
@@ -61,7 +71,7 @@ def login_user():
     password = data.get("password")
 
     user = users_collection.find_one({"username": username})
-    if not user or user["password"] != password:
+    if not user or not check_password_hash(user["password"], password):
         return jsonify({"message": "Invalid credentials!"}), 401
 
     # Generate JWT token
@@ -77,7 +87,12 @@ def login_user():
 @token_required
 def generate_signature():
     data = request.json
-    message = data.get("message").encode()
+    message = data.get("message")
+
+    if not message:
+        return jsonify({"message": "Message is required!"}), 400
+
+    message_bytes = message.encode()
 
     # Generate RSA key pair
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -96,7 +111,7 @@ def generate_signature():
 
     # Sign the message
     signature = private_key.sign(
-        message,
+        message_bytes,
         padding.PSS(
             mgf=padding.MGF1(hashes.SHA256()),
             salt_length=padding.PSS.MAX_LENGTH
@@ -109,7 +124,8 @@ def generate_signature():
 
     # Store in MongoDB
     signatures_collection.insert_one({
-        "message": data.get("message"),
+        "username": request.user,  # Store the user who created the signature
+        "message": message,
         "signature": signature_b64,
         "public_key": public_pem.decode()
     })
@@ -121,10 +137,15 @@ def generate_signature():
 @token_required
 def verify_signature():
     data = request.json
-    message = data.get("message").encode()
+    message = data.get("message")
+
+    if not message:
+        return jsonify({"message": "Message is required!"}), 400
+
+    message_bytes = message.encode()
 
     # Fetch stored signature
-    signature_data = signatures_collection.find_one({"message": data.get("message")})
+    signature_data = signatures_collection.find_one({"message": message})
     if not signature_data:
         return jsonify({"message": "No matching signature found!"}), 404
 
@@ -138,7 +159,7 @@ def verify_signature():
     try:
         public_key.verify(
             signature,
-            message,
+            message_bytes,
             padding.PSS(
                 mgf=padding.MGF1(hashes.SHA256()),
                 salt_length=padding.PSS.MAX_LENGTH
