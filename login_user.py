@@ -1,51 +1,33 @@
 import jwt
 import datetime
-from pymongo import MongoClient
-from werkzeug.security import check_password_hash
+from flask import Flask, request, jsonify
+from database import get_user  # Assuming you have a function to fetch user data
+from flask_bcrypt import Bcrypt
 
+app = Flask(__name__)
+bcrypt = Bcrypt(app)
+
+# Secret key for encoding JWT
 SECRET_KEY = "your_secret_key"
+app.config["SECRET_KEY"] = SECRET_KEY
 
-# Connect to MongoDB
-client = MongoClient("mongodb://localhost:27017/")
-db = client["dss_database"]
-users_collection = db["users"]
+def generate_jwt(username):
+    """Generate JWT Token"""
+    payload = {
+        "username": username,
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=1)  # Token expires in 1 hour
+    }
+    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    return token
 
-def login_user(username, password):
-    user = users_collection.find_one({"username": username})
-    if not user or not check_password_hash(user["password"], password):
-        return {"message": "Invalid credentials!"}
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.json
+    username = data.get("username")
+    password = data.get("password")
 
-    # Generate JWT token
-    token = jwt.encode(
-        {"username": username, "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=1)},
-        SECRET_KEY,
-        algorithm="HS256"
-    )
-    return {"message": "Login successful!", "token": token}
-
-# Example Usage
-print(login_user("test_user", "securepassword"))
-
-
-# import bcrypt
-# from pymongo import MongoClient
-
-# # Connect to MongoDB
-# client = MongoClient("mongodb://localhost:27017/")
-# db = client["dss_database"]
-# users_collection = db["users"]
-
-# def login_user(username, password):
-#     user = users_collection.find_one({"username": username})
-
-#     if user and bcrypt.checkpw(password.encode(), user["password"]):
-#         print("✅ Login successful!")
-#         return True
-#     else:
-#         print("❌ Invalid username or password.")
-#         return False
-
-# # Example usage
-# username = input("Enter your username: ")
-# password = input("Enter your password: ")
-# login_user(username, password)
+    user = get_user(username)
+    if user and bcrypt.check_password_hash(user["password"], password):
+        token = generate_jwt(username)
+        return jsonify({"token": token}), 200
+    return jsonify({"error": "Invalid credentials"}), 401
