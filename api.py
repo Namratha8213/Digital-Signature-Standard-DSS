@@ -55,25 +55,25 @@ def login():
     return jsonify({"error": "Invalid credentials"}), 401
 
 @app.route("/generate_signature", methods=["POST"])
-@jwt_required()  # Requires JWT token
+@jwt_required()
 def generate_signature():
     """Generate and store digital signature for authenticated users."""
-    username = get_jwt_identity()  # Get logged-in user
+    username = get_jwt_identity()
     data = request.get_json()
     message = data.get("message")
 
     if not message:
         return jsonify({"error": "Message is required"}), 400
 
-    generate_and_store_signature(username, message)
-    return jsonify({"message": "Signature generated successfully!"}), 201
+    result = generate_and_store_signature(username, message)
+    return jsonify(result), 201
 
 @app.route("/verify_signature", methods=["POST"])
 @jwt_required()
 def verify_signature_api():
     """Verify digital signature for authenticated users."""
-    data = request.get_json()
     username = get_jwt_identity()
+    data = request.get_json()
     message = data.get("message")
     signature = data.get("signature")
 
@@ -82,6 +82,7 @@ def verify_signature_api():
 
     verification_result = verify_signature(username, message, signature)
     return jsonify(verification_result)
+
 
 if __name__ == "__main__":
     app.run(debug=True)

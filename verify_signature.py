@@ -9,28 +9,30 @@ db = client["dss_database"]
 signatures_collection = db["signatures"]
 
 def verify_signature(username, message, signature):
-    """Verify the given signature against the stored one for a user."""
-    # Fetch the latest stored signature
-    signature_data = signatures_collection.find_one({"username": username}, sort=[("_id", -1)])
-
-    if not signature_data:
+    """Verify the signature for a given message."""
+    
+    # Fetch the correct stored signature for the given message
+    user_doc = signatures_collection.find_one({"username": username})
+    
+    if not user_doc or "signatures" not in user_doc:
         return {"error": "❌ No signatures found for this user."}
 
-    stored_message = signature_data["message"].encode()
-    stored_signature = base64.b64decode(signature_data["signature"])
-    public_key_pem = signature_data["public_key"].encode()
+    # Find the signature that matches the message
+    for sig in user_doc["signatures"]:
+        if sig["message"] == message:
+            stored_signature = base64.b64decode(sig["signature"])
+            public_key_pem = sig["public_key"].encode()
+            break
+    else:
+        return {"error": "❌ No matching signature found for the given message."}
 
     # Load the public key
     public_key = serialization.load_pem_public_key(public_key_pem)
 
+    # Verify the signature
     try:
-        # Ensure the message matches
-        if message.encode() != stored_message:
-            return {"error": "❌ Message does not match stored data."}
-
-        # Verify the signature
         public_key.verify(
-            base64.b64decode(signature),  # Use the received signature
+            stored_signature,
             message.encode(),
             padding.PSS(
                 mgf=padding.MGF1(hashes.SHA256()),
@@ -39,6 +41,5 @@ def verify_signature(username, message, signature):
             hashes.SHA256()
         )
         return {"message": "✅ Signature is valid!"}
-    
     except Exception as e:
         return {"error": f"❌ Signature verification failed: {str(e)}"}
