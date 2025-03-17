@@ -1,20 +1,42 @@
 from flask import Flask, request, jsonify
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from pymongo import MongoClient
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from generate_signature import generate_and_store_signature
 from verify_signature import verify_signature
-
+from datetime import timedelta
 app = Flask(__name__)
 
 # Secret key for JWT authentication
 app.config["JWT_SECRET_KEY"] = "your_secret_key_here"
 jwt = JWTManager(app)
 
+
+# Token expiration time
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)  # Increases token validity to 1 hour
+
 # Connect to MongoDB
 client = MongoClient("mongodb://localhost:27017/")
 db = client["dss_database"]
 users_collection = db["users"]
+
+@app.route("/register", methods=["POST"])
+def register():
+    """Register a new user and store hashed password."""
+    data = request.get_json()
+    username = data.get("username")
+    password = data.get("password")
+
+    if not username or not password:
+        return jsonify({"error": "Username and password are required!"}), 400
+
+    if users_collection.find_one({"username": username}):
+        return jsonify({"error": "User already exists!"}), 400
+
+    hashed_password = generate_password_hash(password, method="pbkdf2:sha256")
+    users_collection.insert_one({"username": username, "password": hashed_password})
+
+    return jsonify({"message": "User registered successfully!"}), 201
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -26,11 +48,11 @@ def login():
     # Fetch user from MongoDB
     user = users_collection.find_one({"username": username})
 
-    if user and check_password_hash(user["password"], password):  # Check hashed password
+    if user and check_password_hash(user["password"], password):
         token = create_access_token(identity=username)
-        return jsonify({"token": token}), 200
-    else:
-        return jsonify({"error": "Invalid credentials"}), 401
+        return jsonify({"token": token.decode('utf-8') if isinstance(token, bytes) else token}), 200
+
+    return jsonify({"error": "Invalid credentials"}), 401
 
 @app.route("/generate_signature", methods=["POST"])
 @jwt_required()  # Requires JWT token
@@ -50,8 +72,15 @@ def generate_signature():
 @jwt_required()
 def verify_signature_api():
     """Verify digital signature for authenticated users."""
+    data = request.get_json()
     username = get_jwt_identity()
-    verification_result = verify_signature(username)
+    message = data.get("message")
+    signature = data.get("signature")
+
+    if not message or not signature:
+        return jsonify({"error": "Message and signature are required!"}), 400
+
+    verification_result = verify_signature(username, message, signature)
     return jsonify(verification_result)
 
 if __name__ == "__main__":

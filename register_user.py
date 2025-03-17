@@ -9,10 +9,12 @@ SECRET_KEY = "your_secret_key"
 client = MongoClient("mongodb://localhost:27017/")
 db = client["dss_database"]
 users_collection = db["users"]
+      
 
 def register_user(username, password):
     """Registers a new user with a hashed password."""
-    hashed_password = generate_password_hash(password)
+    hashed_password = generate_password_hash(password, method="pbkdf2:sha256")  # Force PBKDF2
+    users_collection.insert_one({"username": username, "password": hashed_password})
 
     # Check if user already exists
     if users_collection.find_one({"username": username}):
