@@ -5,6 +5,8 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from generate_signature import generate_and_store_signature
 from verify_signature import verify_signature
 from datetime import timedelta
+
+# Initialize Flask app
 app = Flask(__name__)
 
 # Secret key for JWT authentication
@@ -19,6 +21,7 @@ app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)  # Increases token v
 client = MongoClient("mongodb://localhost:27017/")
 db = client["dss_database"]
 users_collection = db["users"]
+signatures_collection = db["signatures"]  # ✅ Fix: Define signatures collection here
 
 @app.route("/register", methods=["POST"])
 def register():
@@ -65,8 +68,10 @@ def generate_signature():
     if not message:
         return jsonify({"error": "Message is required"}), 400
 
-    result = generate_and_store_signature(username, message)
-    return jsonify(result), 201
+    # Call function to generate and store signature
+    generate_and_store_signature(username, message)
+    return jsonify({"message": "Signature generated successfully!"}), 201
+
 
 @app.route("/verify_signature", methods=["POST"])
 @jwt_required()
@@ -84,5 +89,21 @@ def verify_signature_api():
     return jsonify(verification_result)
 
 
+@app.route("/get_signature", methods=["GET"])
+@jwt_required()
+def get_signature():
+    """Retrieve all stored signatures for a logged-in user."""
+    username = get_jwt_identity()
+
+    # Fetch all signatures for the user
+    user_doc = signatures_collection.find_one({"username": username}, {"_id": 0, "signatures": 1})
+
+    if not user_doc or "signatures" not in user_doc:
+        return jsonify({"error": "❌ No signatures found for this user."}), 404
+
+    return jsonify({"signatures": user_doc["signatures"]})
+
 if __name__ == "__main__":
+    print(app.url_map)  # ✅ Print all registered routes
     app.run(debug=True)
+
