@@ -16,7 +16,7 @@ The **Digital Signature Standard (DSS)** is a cryptographic technique used for v
 
 - **Python** (Core language)
 - **Flask** (For API endpoints)
-- **PyCryptodome** (For cryptographic operations)
+- **Cryptography** (For cryptographic operations)
 - **MongoDB** (For storing user credentials and signatures)
 - **JWT** (For authentication & security)
 
@@ -25,16 +25,14 @@ The **Digital Signature Standard (DSS)** is a cryptographic technique used for v
 ```
 ├── api.py                  # API endpoints (Flask-based)
 ├── database.py             # MongoDB database interactions
-├── dss.py                  # Core Digital Signature Standard implementation
+├── dss.py                  # Core DSS implementation (empty)
 ├── fetch_signatures.py     # Retrieve stored signatures
 ├── generate_signature.py   # Generate digital signatures
-├── login_user.py           # User authentication
 ├── mongodb_connection.py   # MongoDB connection handler
 ├── register_user.py        # User registration
+├── test_mongo.py          # MongoDB connection test
 ├── verify_signature.py     # Verify digital signatures
-├── requirements.txt        # Python dependencies
-├── .gitignore              # Ignore unnecessary files
-└── README.md               # Project documentation
+└── README.md              # Project documentation
 ```
 
 ## Installation & Setup
@@ -44,42 +42,40 @@ The **Digital Signature Standard (DSS)** is a cryptographic technique used for v
 Ensure you have the following installed on your system:
 
 - **Python 3.7+**
-- **MongoDB** (Locally or via MongoDB Atlas)
+- **MongoDB** (Running locally on default port 27017)
 - **pip** (Python package manager)
+
+### Required Python Packages
+
+- flask
+- flask-jwt-extended
+- pymongo
+- cryptography
+- werkzeug
+- PyJWT
 
 ### Steps to Run
 
-1. **Clone the repository:**
+1. **Clone the repository**
+2. **Install the required packages:**
    ```sh
-   git clone https://github.com/Namratha8213/Digital-Signature-Standard-DSS.git
-   cd Digital-Signature-Standard-DSS
+   pip install flask flask-jwt-extended pymongo cryptography werkzeug PyJWT
    ```
-2. **Create a virtual environment (optional but recommended):**
+3. **Ensure MongoDB is running locally**
+4. **Test MongoDB connection:**
    ```sh
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   python test_mongo.py
    ```
-3. **Install dependencies:**
-   ```sh
-   pip install -r requirements.txt
-   ```
-4. **Set up MongoDB:**
-
-   - Run MongoDB locally or configure MongoDB Atlas.
-   - Update the MongoDB URI in `mongodb_connection.py`.
-
 5. **Run the Flask API:**
    ```sh
    python api.py
    ```
-6. **Access the API:**
-   Open `http://127.0.0.1:5000/` in your browser or use Postman to test endpoints.
 
-## Usage
+## API Endpoints
 
 ### User Registration
 
-**Endpoint:** `POST /register`
+**POST /register**
 
 ```json
 {
@@ -90,7 +86,7 @@ Ensure you have the following installed on your system:
 
 ### User Login
 
-**Endpoint:** `POST /login`
+**POST /login**
 
 ```json
 {
@@ -101,7 +97,7 @@ Ensure you have the following installed on your system:
 
 ### Generate Digital Signature
 
-**Endpoint:** `POST /generate_signature`
+**POST /generate_signature**
 
 ```json
 {
@@ -111,7 +107,7 @@ Ensure you have the following installed on your system:
 
 ### Verify Signature
 
-**Endpoint:** `POST /verify_signature`
+**POST /verify_signature**
 
 ```json
 {
@@ -120,20 +116,32 @@ Ensure you have the following installed on your system:
 }
 ```
 
+### Get User Signatures
+
+**GET /get_signature**
+
+- Requires JWT authentication token
+
+## Security Features
+
+- Password hashing using PBKDF2
+- JWT-based authentication
+- Signature expiration (24 hours by default)
+- RSA-2048 key pairs for signatures
+- PSS padding with SHA-256 for signature generation
+
 ## Future Enhancements
 
-- Implement a React-based UI for better user experience
-- Deploy on cloud platforms (AWS, Render, Railway, etc.)
-- Improve security with role-based authentication
+- Add proper error handling and logging
+- Implement rate limiting
+- Add user roles and permissions
+- Create a web interface
+- Add signature revocation capability
 
 ## Contributing
 
-Contributions are welcome! Feel free to fork the repo, submit issues, or create pull requests.
-
-## License
-
-This project is licensed under the MIT License.
+Contributions are welcome! Please feel free to submit issues and pull requests.
 
 ---
 
-📌 **Developed by [Namratha8213](https://github.com/Namratha8213)** 🚀
+📌 **Note:** This project is for educational purposes and demonstrates basic DSS implementation.
