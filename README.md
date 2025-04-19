@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **Digital Signature Standard (DSS)** is a cryptographic technique used for verifying the authenticity and integrity of digital messages or documents. This project implements DSS using Python and MongoDB for secure digital signature generation and verification.
+The **Digital Signature Standard (DSS)** is a cryptographic technique used for verifying the authenticity and integrity of digital messages or documents. This project implements DSS using Python and MongoDB for secure digital signature generation and verification, with a React-based frontend interface.
 
 ## Features
 
@@ -10,9 +10,14 @@ The **Digital Signature Standard (DSS)** is a cryptographic technique used for v
 - Digital signature generation
 - Signature verification
 - Secure database storage using MongoDB
-- API-based interaction using Flask
+- RESTful API using Flask
+- React-based web interface
+- Real-time signature status updates
+- Signature expiration tracking
 
 ## Technologies Used
+
+### Backend
 
 - **Python** (Core language)
 - **Flask** (For API endpoints)
@@ -20,107 +25,94 @@ The **Digital Signature Standard (DSS)** is a cryptographic technique used for v
 - **MongoDB** (For storing user credentials and signatures)
 - **JWT** (For authentication & security)
 
+### Frontend
+
+- **React** (UI framework)
+- **Axios** (HTTP client)
+- **React Router** (Navigation)
+
 ## Project Structure
 
 ```
-├── api.py                  # API endpoints (Flask-based)
-├── database.py             # MongoDB database interactions
-├── dss.py                  # Core DSS implementation (empty)
-├── fetch_signatures.py     # Retrieve stored signatures
-├── generate_signature.py   # Generate digital signatures
-├── mongodb_connection.py   # MongoDB connection handler
-├── register_user.py        # User registration
-├── test_mongo.py          # MongoDB connection test
-├── verify_signature.py     # Verify digital signatures
-└── README.md              # Project documentation
+├── Backend
+│   ├── api.py                  # API endpoints (Flask-based)
+│   ├── database.py             # MongoDB database interactions
+│   ├── generate_signature.py   # Generate digital signatures
+│   ├── verify_signature.py     # Verify digital signatures
+│   ├── register_user.py        # User registration
+│   └── requirements.txt        # Python dependencies
+│
+├── dss-frontend               # React Frontend
+│   ├── public/                # Static files
+│   ├── src/
+│   │   ├── pages/            # React components
+│   │   │   ├── Home.js
+│   │   │   ├── Login.js
+│   │   │   ├── Register.js
+│   │   │   └── Dashboard.js
+│   │   ├── App.js            # Main React component
+│   │   └── api.js            # API configuration
+│   └── package.json          # Frontend dependencies
 ```
 
 ## Installation & Setup
 
 ### Prerequisites
 
-Ensure you have the following installed on your system:
-
 - **Python 3.7+**
-- **MongoDB** (Running locally on default port 27017)
+- **MongoDB** (Running locally on port 27017)
+- **Node.js** and **npm**
 - **pip** (Python package manager)
 
-### Required Python Packages
+### Backend Setup
 
-- flask
-- flask-jwt-extended
-- pymongo
-- cryptography
-- werkzeug
-- PyJWT
-
-### Steps to Run
-
-1. **Clone the repository**
-2. **Install the required packages:**
+1. **Install Python packages:**
    ```sh
-   pip install flask flask-jwt-extended pymongo cryptography werkzeug PyJWT
+   pip install -r requirements.txt
    ```
-3. **Ensure MongoDB is running locally**
-4. **Test MongoDB connection:**
-   ```sh
-   python test_mongo.py
-   ```
-5. **Run the Flask API:**
+2. **Start MongoDB locally**
+3. **Run the Flask API:**
    ```sh
    python api.py
    ```
 
+### Frontend Setup
+
+1. **Navigate to frontend directory:**
+   ```sh
+   cd dss-frontend
+   ```
+2. **Install dependencies:**
+   ```sh
+   npm install
+   ```
+3. **Start development server:**
+   ```sh
+   npm start
+   ```
+
+## Usage
+
+1. Access the web interface at `http://localhost:3000`
+2. Register a new account or login
+3. Use the dashboard to:
+   - Generate new signatures
+   - View stored signatures
+   - Verify existing signatures
+   - Check signature expiration status
+
 ## API Endpoints
 
-### User Registration
+### Authentication
 
-**POST /register**
+- **POST /register** - Create new user account
+- **POST /login** - User authentication
 
-```json
-{
-  "username": "testuser",
-  "password": "securepassword"
-}
-```
+### Signatures
 
-### User Login
-
-**POST /login**
-
-```json
-{
-  "username": "testuser",
-  "password": "securepassword"
-}
-```
-
-### Generate Digital Signature
-
-**POST /generate_signature**
-
-```json
-{
-  "message": "Hello, this is a test!"
-}
-```
-
-### Verify Signature
-
-**POST /verify_signature**
-
-```json
-{
-  "message": "Hello, this is a test!",
-  "signature": "<signature_from_response>"
-}
-```
-
-### Get User Signatures
-
-**GET /get_signature**
-
-- Requires JWT authentication token
+- **POST /generate_signature** - Create new signature
+- **POST /verify_signature** - Verify existing signature
+- **GET /get_signature** - Retrieve user's signatures
 
 ## Security Features
 
@@ -129,14 +121,8 @@ Ensure you have the following installed on your system:
 - Signature expiration (24 hours by default)
 - RSA-2048 key pairs for signatures
 - PSS padding with SHA-256 for signature generation
-
-## Future Enhancements
-
-- Add proper error handling and logging
-- Implement rate limiting
-- Add user roles and permissions
-- Create a web interface
-- Add signature revocation capability
+- CORS protection
+- Frontend token management
 
 ## Contributing
 
