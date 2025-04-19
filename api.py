@@ -5,9 +5,15 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from generate_signature import generate_and_store_signature
 from verify_signature import verify_signature
 from datetime import timedelta
+from flask_cors import CORS
+
+
 
 # Initialize Flask app
 app = Flask(__name__)
+
+# # Enable CORS AFTER app is created
+CORS(app)
 
 # Secret key for JWT authentication
 app.config["JWT_SECRET_KEY"] = "your_secret_key_here"
@@ -81,6 +87,12 @@ def verify_signature_api():
     data = request.get_json()
     message = data.get("message")
     signature = data.get("signature")
+
+    print("🔍 Incoming verify request:")
+    print("Username:", username)
+    print("Message:", message)
+    print("Signature (trimmed):", signature[:50], "...")
+
 
     if not message or not signature:
         return jsonify({"error": "Message and signature are required!"}), 400
